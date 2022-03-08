@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using OrderBookTest.Interface;
 
 namespace OrderBookTest.Model
 {
@@ -7,9 +8,11 @@ namespace OrderBookTest.Model
     {
         private readonly Instrument instrument;
 
-        private readonly SortedSet<Limit> bids = new SortedSet<Limit>();
+        private readonly ILog log;
 
-        private readonly SortedSet<Limit> asks = new SortedSet<Limit>();
+        private readonly SortedSet<Limit> bids = new SortedSet<Limit>(BidLimitComparer.Comparer);
+
+        private readonly SortedSet<Limit> asks = new SortedSet<Limit>(AskLimitComparer.Comparer);
 
         private readonly Dictionary<long, OrderBookEntry> orderCache = new Dictionary<long, OrderBookEntry>();
 
@@ -18,20 +21,23 @@ namespace OrderBookTest.Model
         // public SortedSet<Limit> Asks { get; private set; }
 
 
-        public OrderBook(Instrument instrument)
+        public OrderBook(Instrument instrument, ILog log)
         {
             this.instrument = instrument;
+            this.log = log;
         }
 
-        public void AddOrder(Order order)
+        public void AddOrder(Order order, ILog log)
         {
             var limit = new Limit(order.Price);
 
-            AddOrder(order, limit, order.IsBuy ? bids : asks, orderCache);
+            AddOrder(order, limit, order.IsBuy ? bids : asks, orderCache, log);
         }
 
-        public void AddOrder(Order order, Limit limit, SortedSet<Limit> set, Dictionary<long, OrderBookEntry> orderCache)
+        public void AddOrder(Order order, Limit limit, SortedSet<Limit> set, Dictionary<long, OrderBookEntry> orderCache, ILog log)
         {
+            log.Log("Adding order to order book.");
+
             OrderBookEntry orderBookEntry = new OrderBookEntry(limit, order);
 
             // If set already contains Limit level, add OrderBookEntry to existing limit
@@ -61,13 +67,13 @@ namespace OrderBookTest.Model
             orderCache.Add(order.OrderId, orderBookEntry);
         }
 
-        public void UpdateOrder(Order order)
+        public void UpdateOrder(Order order, ILog log)
         {
             if (orderCache.ContainsKey(order.OrderId))
             {
                 // Remove and add OrderBookEntry as item loses its priority
                 RemoveOrder(order.OrderId);
-                AddOrder(order);
+                AddOrder(order, log);
             }
         }
 
