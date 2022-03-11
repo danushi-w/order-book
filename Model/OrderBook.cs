@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Text;
+using ConsoleTables;
 using OrderBookTest.Interface;
 
 namespace OrderBookTest.Model
 {
-    public class OrderBook
+    public class OrderBook : IOrderBook
     {
         private readonly Instrument instrument;
 
@@ -27,17 +30,15 @@ namespace OrderBookTest.Model
             this.log = log;
         }
 
-        public void AddOrder(Order order, ILog log)
+        public void AddOrder(Order order)
         {
             var limit = new Limit(order.Price);
 
-            AddOrder(order, limit, order.IsBuy ? bids : asks, orderCache, log);
+            AddOrder(order, limit, order.IsBuy ? bids : asks, orderCache);
         }
 
-        public void AddOrder(Order order, Limit limit, SortedSet<Limit> set, Dictionary<long, OrderBookEntry> orderCache, ILog log)
+        public void AddOrder(Order order, Limit limit, SortedSet<Limit> set, Dictionary<long, OrderBookEntry> orderCache)
         {
-            log.Log("Adding order to order book.");
-
             OrderBookEntry orderBookEntry = new OrderBookEntry(limit, order);
 
             // If set already contains Limit level, add OrderBookEntry to existing limit
@@ -67,13 +68,13 @@ namespace OrderBookTest.Model
             orderCache.Add(order.OrderId, orderBookEntry);
         }
 
-        public void UpdateOrder(Order order, ILog log)
+        public void UpdateOrder(Order order)
         {
             if (orderCache.ContainsKey(order.OrderId))
             {
                 // Remove and add OrderBookEntry as item loses its priority
                 RemoveOrder(order.OrderId);
-                AddOrder(order, log);
+                AddOrder(order);
             }
         }
 
@@ -110,6 +111,83 @@ namespace OrderBookTest.Model
 
                 // Remove OrderBookEntry from order cache
                 orderCache.Remove(orderId);
+            }
+        }
+
+        public List<OrderBookEntry> GetBidOrders()
+        {
+            List<OrderBookEntry> orders = new List<OrderBookEntry>();
+
+            foreach(var bid in bids)
+            {
+                if (bid.IsEmpty)
+                    continue;
+
+                OrderBookEntry currentEntry = bid.Head;
+                while (currentEntry != null)
+                {
+                    orders.Add(currentEntry);
+                    currentEntry = currentEntry.Next;
+                }
+            }
+
+            return orders;
+        }
+
+        public List<OrderBookEntry> GetAskOrders()
+        {
+            List<OrderBookEntry> orders = new List<OrderBookEntry>();
+
+            foreach(var ask in asks)
+            {
+                if (ask.IsEmpty)
+                    continue;
+
+                OrderBookEntry currentEntry = ask.Head;
+                while (currentEntry != null)
+                {
+                    orders.Add(currentEntry);
+                    currentEntry = currentEntry.Next;
+                }
+            }
+
+            return orders;
+        }
+
+        public List<Tuple<decimal,int,int>> GetBidLevelTuple()
+        {
+            var bidLevels = new List<Tuple<decimal, int, int>>();
+
+            foreach (var bid in bids)
+            {
+                var level = Tuple.Create(bid.Price, bid.GetLimitOrderQuantity(), bid.GetLimitOrderCount());
+                bidLevels.Add(level);
+            }
+            return bidLevels;
+        }
+
+        public void WriteBookToLog()
+        {
+            log.Log($"************************* {this.instrument.Symbol.ToUpper()} **************************");
+            WriteBookToLog(Side.Bid, asks);
+            WriteBookToLog(Side.Ask, asks);
+            log.Log("");
+        }
+
+        public void WriteBookToLog(Side side, SortedSet<Limit> set)
+        {
+            log.Log("");
+            log.Log($"{side.ToString()}");
+            log.Log("");
+
+            log.Log(" --------------------------------------------------");
+            log.Log($"|    {side.ToString()} Price    |   {side.ToString()} Size   |   Order Count   |");
+            log.Log(" --------------------------------------------------");
+
+            foreach (var limit in set)
+            {
+                log.Log($"|      {limit.Price.ToString("0.00")}       |     {limit.GetLimitOrderQuantity()}      |        {limit.GetLimitOrderCount()}       |");
+                log.Log(" --------------------------------------------------");
             }
         }
     }
