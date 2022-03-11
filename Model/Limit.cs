@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+
 namespace OrderBookTest.Model
 {
     public class Limit
@@ -48,6 +50,23 @@ namespace OrderBookTest.Model
             }
 
             return orderQuantity;
+        }
+
+        public List<Order> GetLimitOrderRecords()
+        {
+            List<Order> orderRecords = new List<Order>();
+            OrderBookEntry pointer = Head;
+
+            while (Head != null)
+            {
+                var currentOrder = pointer.CurrentOrder;
+                if (currentOrder.Quantity > 0)
+                    orderRecords.Add(currentOrder);
+
+                pointer = pointer.Next;
+            }
+
+            return orderRecords;
         }
     }
 }
