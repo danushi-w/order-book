@@ -12,7 +12,7 @@
         public event EventHandler<ProcessingStartEventArgs> ProcessingStartEvent;
         public event EventHandler ProcessingFinishEvent;
 
-        private readonly ILog log;
+        private readonly ILog log = new ConsoleLog();
 
         public void Run()
         {
