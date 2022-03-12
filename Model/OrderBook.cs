@@ -166,7 +166,7 @@ namespace OrderBookTest.Model
         public void WriteBookToLog()
         {
             log.Log($"************************* {this.instrument.Symbol.ToUpper()} **************************");
-            WriteBookToLog(Side.Bid, asks);
+            WriteBookToLog(Side.Bid, bids);
             WriteBookToLog(Side.Ask, asks);
             log.Log("");
         }
